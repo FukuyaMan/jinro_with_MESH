@@ -99,8 +99,13 @@ async def connect_and_setup(serial_number, notify_handler=None):
 
 async def find_device_by_serial(serial_number):
     # シリアルナンバーでデバイスを検索
-    devices = await discover()
-    return next((d for d in devices if d.name and d.name.startswith(serial_number)), None)
+    while True:
+        devices = await discover()
+        device = next((d for d in devices if d.name and d.name.startswith(serial_number)), None)
+        if device:
+            return device
+        print(f"デバイス {serial_number} が見つかりませんでした。再スキャンします...")
+        await asyncio.sleep(2)
 
 async def setup_all_blocks():
     # 全ブロックの接続と初期設定
@@ -125,6 +130,13 @@ async def setup_all_blocks():
     print("--- セットアップ完了 ---")
     return True
 
+async def reconnect(client, serial_number):
+    # クライアントが切断されているか確認
+    if not client or not client.is_connected:
+        print(f"{serial_number}との接続が切れました。再接続を試みます...")
+        client = await connect_and_setup(serial_number)
+    return client
+
 async def main_loop():
     # メインループ
     global room_status, motion_detected, away_mode
@@ -142,11 +154,14 @@ async def main_loop():
         update_csv()
     while True:
         try:
+            th_client = await reconnect(th_client, SN_TH)
+            md_client = await reconnect(md_client, SN_MD)
+            ac_client = await reconnect(ac_client, SN_AC)
             current_occupancy = room_status['occupancy']
             if away_mode:
                 if current_occupancy != '退席中':
                     room_status['occupancy'] = '退席中'
-                print("退席モード中です。空室への変更はスキップされます。")
+                print("退席モード中...")
             else:
                 if motion_detected:
                     if current_occupancy == '空室':

@@ -3,19 +3,10 @@ import time
 from bleak import BleakClient, BleakScanner
 from collections import Counter
 
-# MESHブロックの共通サービスUUIDと特性UUID
-# 全てのMESHブロックが持つ共通サービスUUID
-MESH_SERVICE_UUID = "72c90001-57a9-4d40-b746-534e22ec9f9e"
-
-# このサービスに属する特性UUID群
-# コマンド送信 (Write Without Response)
-COMMAND_CHAR_UUID = "72c90002-57a9-4d40-b746-534e22ec9f9e"
-# イベント通知 (Notify)
-NOTIFICATION_CHAR_UUID = "72c90003-57a9-4d40-b746-534e22ec9f9e"
-# 状態設定など (Write)
-STATE_COMMAND_CHAR_UUID = "72c90004-57a9-4d40-b746-534e22ec9f9e"
-# 状態取得 (Indicate, ACK必要)
-STATE_INDICATION_CHAR_UUID = "72c90005-57a9-4d40-b746-534e22ec9f9e"
+# UUID
+CORE_INDICATE_UUID = ('72c90005-57a9-4d40-b746-534e22ec9f9e')
+CORE_NOTIFY_UUID = ('72c90003-57a9-4d40-b746-534e22ec9f9e')
+CORE_WRITE_UUID = ('72c90004-57a9-4d40-b746-534e22ec9f9e')
 
 # コマンドIDと通知ID
 # LED制御コマンド
@@ -27,12 +18,12 @@ NOTIF_ID_BUTTON_EVENT = 0x01
 # 動きセンサーイベント通知ID (向き)
 NOTIF_ID_MOTION_ORIENTATION = 0x03
 
-# 動きブロックの向きの値 (仕様書に基づく)
+# 動きブロックの向きの値
 ORIENTATION_LEFT = 0x01
 ORIENTATION_UP = 0x05
 ORIENTATION_RIGHT = 0x06
-ORIENTATION_FRONT = 0x03 # 表
-ORIENTATION_BACK = 0x04 # 裏
+ORIENTATION_FRONT = 0x03
+ORIENTATION_BACK = 0x04
 
 # 色定義 (RGB値のタプル)
 COLOR_RED = (255, 0, 0)
@@ -41,11 +32,11 @@ COLOR_BLUE = (0, 0, 255)
 COLOR_OFF = (0, 0, 0)
 
 # MESHブロックのシリアルナンバー識別子
-# 実際のブロックのComplete Local Nameに含まれる識別子に合わせてください。
-TEST_LED_SN = "TEST_LED_SN" 
-TEST_BUTTON_SN = "TEST_BUTTON_SN"
-TEST_GPIO_SN = "TEST_GPIO_SN" 
-TEST_MOTION_SN = "TEST_MOTION_SN"
+# 実際のブロックのComplete Local Nameに含まれる識別子に合わせる
+TEST_LED_SN = "1027271" 
+TEST_BUTTON_SN = "1029369"
+TEST_GPIO_SN = "1050119" 
+TEST_MOTION_SN = "1029724"
 
 # グローバル変数 (テストの状態を管理)
 test_clients = {
@@ -79,7 +70,7 @@ async def set_led_state(client, color, blink=False):
     blink_flag = 0x01 if blink else 0x00
     led_data = bytearray([CMD_ID_LED_CONTROL, color[0], color[1], color[2], blink_flag])
     try:
-        await client.write_gatt_char(COMMAND_CHAR_UUID, led_data, response=False)
+        await client.write_gatt_char(CORE_WRITE_UUID, led_data, response=False)
         print(f"Set LED to {color} (blink={blink})")
     except Exception as e:
         print(f"Error setting LED state: {e}")
@@ -100,7 +91,7 @@ async def play_buzzer_sound(client, duration_ms, frequency_hz=440):
         duration_bytes[0], duration_bytes[1]
     ])
     try:
-        await client.write_gatt_char(COMMAND_CHAR_UUID, buzzer_data, response=False)
+        await client.write_gatt_char(CORE_WRITE_UUID, buzzer_data, response=False)
         print(f"Played buzzer for {duration_ms}ms at {frequency_hz}Hz")
     except Exception as e:
         print(f"Error playing buzzer: {e}")
@@ -215,7 +206,7 @@ async def main():
     global test_clients
     
     print("MESHブロックをスキャン中...")
-    devices = await BleakScanner.discover(timeout=5.0)
+    devices = await BleakScanner.discover(timeout=60.0)
     
     discovered_mesh_devices_by_sn_suffix = {}
     for d in devices:
@@ -245,7 +236,7 @@ async def main():
         test_clients["button"] = await connect_to_mesh_block(button_device.address, "TEST_BUTTON")
         if test_clients["button"]:
             try:
-                await test_clients["button"].start_notify(NOTIFICATION_CHAR_UUID, button_notification_handler)
+                await test_clients["button"].start_notify(CORE_NOTIFY_UUID, button_notification_handler)
                 print("Started button notifications.")
             except Exception as e:
                 print(f"Error starting button notifications: {e}")
@@ -265,7 +256,7 @@ async def main():
         test_clients["motion"] = await connect_to_mesh_block(motion_device.address, "TEST_MOTION")
         if test_clients["motion"]:
             try:
-                await test_clients["motion"].start_notify(NOTIFICATION_CHAR_UUID, motion_notification_handler)
+                await test_clients["motion"].start_notify(CORE_NOTIFY_UUID, motion_notification_handler)
                 print("Started motion notifications.")
             except Exception as e:
                 print(f"Error starting motion notifications: {e}")

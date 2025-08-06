@@ -4,10 +4,6 @@ import time
 from bleak import BleakClient, BleakScanner
 from collections import Counter
 
-# MESHブロックの共通サービスUUIDと特性UUID
-# 全てのMESHブロックが持つ共通サービスUUID
-MESH_SERVICE_UUID = "72c90001-57a9-4d40-b746-534e22ec9f9e"
-
 # このサービスに属する特性UUID群
 # コマンド送信 (Write Without Response)
 COMMAND_CHAR_UUID = "72c90002-57a9-4d40-b746-534e22ec9f9e"
@@ -899,7 +895,7 @@ async def main():
 
 if __name__ == "__main__":
     # プレイヤーの色のマッピングを初期化
-    # プレイヤーIDと色の対応を定義します。
+    # プレイヤーIDと色の対応を定義
     PLAYER_COLORS = {
         "player1": COLOR_RED,
         "player2": COLOR_GREEN,
